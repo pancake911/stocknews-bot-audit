@@ -41,7 +41,7 @@ URL_OPEN_ACCOUNT  = os.getenv("URL_OPEN_ACCOUNT",  "https://www.binance.com")  #
 URL_BUY_TUTORIAL  = os.getenv("URL_BUY_TUTORIAL",  "https://www.binance.com")  # 购买教程
 URL_GET_BONUS     = os.getenv("URL_GET_BONUS",     "https://www.binance.com")  # 领取福利
 STATS_DB          = os.getenv("STATS_DB", "stats.db")                          # 统计数据库
-ADMIN_USER_ID     = int(os.getenv("ADMIN_USER_ID", "5471917452"))              # 管理员 TG ID
+ADMIN_USER_ID     = int(os.getenv("ADMIN_USER_ID", "0"))                          # 管理员 TG ID
 # ─────────────────────────────────────────────────────────────
 
 logging.basicConfig(level=logging.INFO)
@@ -108,7 +108,7 @@ def _save_push_msg(push_type: str, chat_id: int, message_id: int):
 def _fetch_blockbeats_all() -> list:
     """从律动财经拉取24h新闻，返回 [{title, link}, ...]"""
     try:
-        BLOCKBEATS_KEY = "bbp_ddb8d6bbd33c0fcf263fa4c66c1adfa4b53a2f32765174d04551e264d5ae"
+        BLOCKBEATS_KEY = os.getenv("BLOCKBEATS_KEY", "YOUR_BLOCKBEATS_KEY")
         _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
         _proxy_args = ["--proxy", _proxy] if _proxy else []
         r = subprocess.run(
