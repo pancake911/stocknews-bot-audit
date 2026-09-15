@@ -44,8 +44,11 @@ from telegram.constants import ParseMode
 from telegram.request import HTTPXRequest
 
 # ─── 配置区 ──────────────────────────────────────────────────
-TELEGRAM_BOT_TOKEN = os.getenv("PROMO_BOT_TOKEN", "YOUR_PROMO_BOT_TOKEN")
+TELEGRAM_BOT_TOKEN = os.getenv("PROMO_BOT_TOKEN", "")  # 必须通过环境变量或 plist 注入，不能硬编码
 FINNHUB_API_KEY    = os.getenv("FINNHUB_API_KEY",    "YOUR_FINNHUB_KEY")
+# 代理：固定用 http://127.0.0.1:12000，不读环境变量（plist 注入的 socks5://7890 不可用）
+# 迁移到服务器后改为空字符串: _PROXY = ""
+_PROXY = "http://127.0.0.1:12000"
 BINANCE_INVITE_URL = os.getenv("BINANCE_INVITE_URL", "https://www.binance.com")
 # 底部按钮链接（待填写）
 URL_OPEN_ACCOUNT  = os.getenv("URL_OPEN_ACCOUNT",  "https://www.binance.com")  # 美股开户
@@ -224,7 +227,7 @@ TICKER_NAMES = {
 
 def _finnhub_curl(path: str) -> dict:
     """用 curl 直接调 Finnhub REST API，绕过 Python SSL 问题"""
-    _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+    _proxy = _PROXY
     _proxy_args = ["--proxy", _proxy] if _proxy else []
     url = f"https://api.finnhub.io/api/v1/{path}&token={FINNHUB_API_KEY}"
     cmd = ["curl", "-s", "--max-time", "8", "-H", "User-Agent: Mozilla/5.0"] + _proxy_args + [url]
@@ -240,7 +243,7 @@ def is_hk_ticker(ticker: str) -> bool:
 def get_stock_data_hk_yahoo(ticker: str) -> dict | None:
     """港股备用数据源：Yahoo Finance（走代理，gtimg 失败时使用）"""
     try:
-        _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+        _proxy = _PROXY
         _proxy_args = ["--proxy", _proxy] if _proxy else []
         cmd = ["curl", "-s", "--max-time", "10",
                "-H", "User-Agent: Mozilla/5.0"] + _proxy_args + [
@@ -557,7 +560,7 @@ def get_technical_signals(ticker: str, client, price: float) -> dict:
 
     out = {"rsi_line": "", "macd_line": "", "ma_line": "", "vol_line": "", "yahoo_volume": 0}
     try:
-        _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+        _proxy = _PROXY
         _proxy_args = ["--proxy", _proxy] if _proxy else []
         cmd = ["curl", "-s", "--max-time", "10",
                "-H", "User-Agent: Mozilla/5.0"] + _proxy_args + [
@@ -1088,7 +1091,7 @@ def curl_get(url: str, referer: str = "", proxy: bool = False) -> str:
     if referer:
         cmd += ["-H", f"Referer: {referer}"]
     if proxy:
-        _p = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+        _p = _PROXY
         if _p:
             cmd += ["--proxy", _p]
     else:
@@ -1164,7 +1167,7 @@ def get_news_yahoo(ticker: str, filter_ticker: str | None = None) -> list[tuple[
     try:
         # query1/query2 轮试，其中一个限速时用另一个
         for host in ["query1", "query2"]:
-            _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+            _proxy = _PROXY
             _proxy_args = ["--proxy", _proxy] if _proxy else []
             cmd = ["curl", "-s", "--max-time", "10",
                    "-H", "User-Agent: Mozilla/5.0"] + _proxy_args + [
@@ -1777,7 +1780,7 @@ _COINGECKO_ID_MAP: dict[str, str] = {
 
 def _curl_get_json(url: str) -> dict | list:
     """curl 请求返回 JSON，自动带代理"""
-    _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+    _proxy = _PROXY
     _proxy_args = ["--proxy", _proxy] if _proxy else []
     cmd = ["curl", "-s", "--max-time", "10",
            "-H", "User-Agent: Mozilla/5.0",
@@ -1900,7 +1903,7 @@ def _fetch_all_crypto_rss() -> list[tuple[str, str, float]]:
     if now_ts - _rss_cache["ts"] < 600:  # 10分钟内用缓存
         return _rss_cache["items"]
 
-    _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+    _proxy = _PROXY
     _proxy_args = ["--proxy", _proxy] if _proxy else []
 
     def fetch_one(url):
@@ -1946,7 +1949,7 @@ def _fetch_blockbeats_news() -> list[tuple[str, str]]:
     if now_ts - _bb_cache["ts"] < 600:
         return _bb_cache["items"]
     try:
-        _proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+        _proxy = _PROXY
         _proxy_args = ["--proxy", _proxy] if _proxy else []
         _key = os.getenv("BLOCKBEATS_KEY", "")
         if not _key:
@@ -2401,7 +2404,7 @@ _TOPIC_KW = ["美股", "股票", "行情", "资讯", "新闻", "财经", "market
 async def _get_forum_thread(app, chat_id: int):
     try:
         import urllib.request as _ur, json as _j
-        proxy_url = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy", "")
+        proxy_url = _PROXY
         token = app.bot.token
         url = f"https://api.telegram.org/bot{token}/getForumTopics?chat_id={chat_id}&limit=100"
         if proxy_url:
@@ -2541,7 +2544,7 @@ async def _binance_listing_poll_job(app):
     _LISTING_KW = ["现货", "合约", "上线", "上市", "新增交易对", "永续合约", "交割合约"]
     try:
         r = subprocess.run(
-            ["curl", "-s", "--proxy", "socks5://127.0.0.1:7890", "--max-time", "10",
+            ["curl", "-s", "--proxy", _PROXY, "--max-time", "10",
              "-H", "lang: zh-CN",
              "https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&pageSize=10&pageNo=1"],
             capture_output=True, text=True, timeout=12
@@ -3995,7 +3998,7 @@ def main():
         sys.exit(1)
     # ─────────────────────────────────────────────────────────────────
 
-    proxy = os.getenv("HTTPS_PROXY", "") or os.getenv("https_proxy", "")
+    proxy = _PROXY
     proxy_kwargs = {"proxy": proxy} if proxy else {}
     req = HTTPXRequest(connection_pool_size=8, connect_timeout=15, read_timeout=60, write_timeout=30, pool_timeout=60, **proxy_kwargs)
     req_updates = HTTPXRequest(connection_pool_size=2, connect_timeout=15, read_timeout=60, write_timeout=30, pool_timeout=60, **proxy_kwargs)
