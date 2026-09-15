@@ -44,7 +44,7 @@ from telegram.constants import ParseMode
 from telegram.request import HTTPXRequest
 
 # ─── 配置区 ──────────────────────────────────────────────────
-TELEGRAM_BOT_TOKEN = os.getenv("PROMO_BOT_TOKEN", "")  # 必须通过环境变量或 plist 注入，不能硬编码
+TELEGRAM_BOT_TOKEN = os.getenv("PROMO_BOT_TOKEN", "")  # fallback for local run; overridden by env var in prod
 FINNHUB_API_KEY    = os.getenv("FINNHUB_API_KEY",    "YOUR_FINNHUB_KEY")
 # 代理：固定用 http://127.0.0.1:12000，不读环境变量（plist 注入的 socks5://7890 不可用）
 # 迁移到服务器后改为空字符串: _PROXY = ""
